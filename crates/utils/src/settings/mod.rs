@@ -42,6 +42,12 @@ impl Settings {
     if config.hostname == "unset" {
       Err(anyhow!("Hostname variable is not set!").into())
     } else {
+      // Validate debate configuration if present
+      if let Some(ref debate_config) = config.debate {
+        if let Err(e) = debate_config.validate() {
+          return Err(anyhow!("Invalid debate configuration: {}", e).into());
+        }
+      }
       Ok(config)
     }
   }

@@ -18,6 +18,8 @@ pub struct LemmyContext {
   pictrs_client: Arc<ClientWithMiddleware>,
   secret: Arc<Secret>,
   rate_limit_cell: RateLimit,
+  #[cfg(feature = "full")]
+  debate_orchestrator: Option<Arc<lemmy_debate::DebateOrchestrator>>,
 }
 
 impl LemmyContext {
@@ -34,7 +36,19 @@ impl LemmyContext {
       pictrs_client: Arc::new(pictrs_client),
       secret: Arc::new(secret),
       rate_limit_cell,
+      #[cfg(feature = "full")]
+      debate_orchestrator: None,
     }
+  }
+
+  #[cfg(feature = "full")]
+  pub fn set_debate_orchestrator(&mut self, orchestrator: lemmy_debate::DebateOrchestrator) {
+    self.debate_orchestrator = Some(Arc::new(orchestrator));
+  }
+
+  #[cfg(feature = "full")]
+  pub fn debate_orchestrator(&self) -> &lemmy_debate::DebateOrchestrator {
+    self.debate_orchestrator.as_ref().expect("Debate orchestrator not initialized")
   }
   pub fn pool(&self) -> DbPool<'_> {
     DbPool::Pool(&self.pool)
@@ -72,6 +86,7 @@ impl LemmyContext {
     let secret = Secret {
       id: 0,
       jwt_secret: String::new().into(),
+      openrouter_api_key: None,
     };
 
     let rate_limit_cell = RateLimit::with_test_config();

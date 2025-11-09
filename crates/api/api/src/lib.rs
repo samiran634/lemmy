@@ -13,6 +13,7 @@ use totp_rs::{Secret, TOTP};
 
 pub mod comment;
 pub mod community;
+pub mod debate;
 pub mod federation;
 pub mod local_user;
 pub mod post;

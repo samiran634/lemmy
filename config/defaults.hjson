@@ -110,6 +110,31 @@
     bind: "127.0.0.1"
     port: 10002
   }
+  # AI Debate system configuration
+  debate: {
+    # OpenRouter API key for accessing AI models
+    openrouter_api_key: "sk-or-v1-..."
+    # OpenRouter API base URL (optional, defaults to https://openrouter.ai/api/v1)
+    openrouter_base_url: "https://openrouter.ai/api/v1"
+    # Maximum number of concurrent debates to process
+    max_concurrent_debates: 5
+    # Interval in seconds for polling active debates
+    poll_interval_seconds: 10
+    # Maximum number of rounds per debate
+    max_rounds_per_debate: 10
+    # Maximum tokens per AI response
+    max_tokens_per_response: 1000
+    # Request timeout in seconds
+    request_timeout_seconds: 60
+    # Maximum API calls per minute (rate limiting)
+    max_api_calls_per_minute: 60
+    # Default AI models to use if user doesn't specify
+    default_models: [
+      "openai/gpt-4-turbo"
+      "anthropic/claude-3-opus"
+      "google/gemini-pro"
+    ]
+  }
   # Sets a response Access-Control-Allow-Origin CORS header. Can also be set via environment:
   # `LEMMY_CORS_ORIGIN=example.org,site.com`
   # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin

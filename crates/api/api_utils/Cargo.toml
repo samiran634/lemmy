@@ -30,6 +30,7 @@ full = [
   "lemmy_db_views_comment/full",
   "lemmy_db_views_post/full",
   "lemmy_db_views_notification/full",
+  "lemmy_debate/full",
 ]
 
 [dependencies]
@@ -46,6 +47,7 @@ lemmy_db_views_comment = { workspace = true }
 lemmy_db_views_post = { workspace = true }
 lemmy_db_views_notification = { workspace = true }
 lemmy_email = { workspace = true }
+lemmy_debate = { workspace = true, optional = true }
 anyhow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

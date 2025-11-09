@@ -3360,6 +3360,7 @@ dependencies = [
  "lemmy_db_views_search_combined",
  "lemmy_db_views_site",
  "lemmy_db_views_vote",
+ "lemmy_debate",
  "lemmy_diesel_utils",
  "lemmy_email",
  "lemmy_utils 1.0.0-alpha.12",
@@ -3539,6 +3540,7 @@ dependencies = [
  "lemmy_db_views_post",
  "lemmy_db_views_private_message",
  "lemmy_db_views_site",
+ "lemmy_debate",
  "lemmy_diesel_utils",
  "lemmy_email",
  "lemmy_utils 1.0.0-alpha.12",
@@ -4224,6 +4226,32 @@ dependencies = [
  "serial_test",
  "tokio",
  "ts-rs",
+]
+
+[[package]]
+name = "lemmy_debate"
+version = "1.0.0-alpha.12"
+dependencies = [
+ "activitypub_federation",
+ "anyhow",
+ "chrono",
+ "derive-new",
+ "diesel",
+ "diesel-async",
+ "lemmy_db_schema 1.0.0-alpha.12",
+ "lemmy_db_schema_file",
+ "lemmy_db_views_post",
+ "lemmy_diesel_utils",
+ "lemmy_utils 1.0.0-alpha.12",
+ "reqwest 0.12.24",
+ "reqwest-middleware",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "serial_test",
+ "tokio",
+ "tracing",
+ "url",
 ]
 
 [[package]]

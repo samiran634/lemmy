@@ -205,13 +205,41 @@ pub async fn start_lemmy_server(args: CmdArgs) -> LemmyResult<()> {
   let pictrs_client = ClientBuilder::new(client_builder(&SETTINGS).no_proxy().build()?)
     .with(TracingMiddleware::default())
     .build();
-  let context = LemmyContext::create(
+  let mut context = LemmyContext::create(
     pool.clone(),
     client.clone(),
     pictrs_client,
     secret.clone(),
     rate_limit_cell,
   );
+
+  // Initialize debate orchestrator if debate system is enabled
+  #[cfg(feature = "full")]
+  if SETTINGS.debate.is_some() {
+    tracing::info!("Initializing debate orchestrator");
+    let api_key = lemmy_debate::config::get_openrouter_api_key_from_pool(
+      &mut (&pool).into(),
+      SETTINGS.debate.as_ref(),
+    )
+    .await?
+    .unwrap_or_else(|| {
+      tracing::warn!("OpenRouter API key not configured, debate system may not work");
+      String::new()
+    });
+
+    let base_url = SETTINGS
+      .debate
+      .as_ref()
+      .and_then(|d| d.openrouter_base_url.clone());
+
+    if let Ok(openrouter_client) = lemmy_debate::OpenRouterClient::new(api_key, base_url) {
+      let orchestrator = lemmy_debate::DebateOrchestrator::new(openrouter_client, SETTINGS.clone());
+      context.set_debate_orchestrator(orchestrator);
+      tracing::info!("Debate orchestrator initialized successfully");
+    } else {
+      tracing::error!("Failed to create OpenRouter client, debate system disabled");
+    }
+  }
 
   if let Some(prometheus) = SETTINGS.prometheus.clone() {
     serve_prometheus(prometheus, context.clone())?;
@@ -244,6 +272,18 @@ pub async fn start_lemmy_server(args: CmdArgs) -> LemmyResult<()> {
     // Schedules various cleanup tasks for the DB
     let _scheduled_tasks = tokio::task::spawn(scheduled_tasks::setup(request_data.clone()));
   }
+
+  // Start debate worker if debate system is enabled
+  let debate_worker_task = if SETTINGS.debate.is_some() {
+    tracing::info!("Starting debate worker task");
+    let debate_context = lemmy_debate::DebateContext::new(context.pool().clone(), &SETTINGS);
+    Some(tokio::task::spawn(lemmy_debate::debate_worker_task(
+      debate_context,
+    )))
+  } else {
+    tracing::info!("Debate system disabled, skipping debate worker");
+    None
+  };
 
   let server = if !args.disable_http_server {
     if let Some(startup_server_handle) = startup_server_handle {
@@ -297,6 +337,12 @@ pub async fn start_lemmy_server(args: CmdArgs) -> LemmyResult<()> {
   }
   if let Some(federate) = federate {
     federate.cancel().await?;
+  }
+
+  // Abort debate worker task if running
+  if let Some(debate_worker) = debate_worker_task {
+    tracing::info!("Stopping debate worker task");
+    debate_worker.abort();
   }
 
   // Wait for outgoing apub sends to complete

@@ -9,4 +9,5 @@ use lemmy_diesel_utils::sensitive::SensitiveString;
 pub struct Secret {
   pub id: i32,
   pub jwt_secret: SensitiveString,
+  pub openrouter_api_key: Option<SensitiveString>,
 }

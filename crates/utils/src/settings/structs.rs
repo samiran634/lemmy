@@ -44,6 +44,9 @@ pub struct Settings {
   // Prometheus configuration.
   #[doku(example = "Some(Default::default())")]
   pub prometheus: Option<PrometheusConfig>,
+  /// AI Debate system configuration
+  #[doku(example = "Some(Default::default())")]
+  pub debate: Option<DebateConfig>,
   /// Sets a response Access-Control-Allow-Origin CORS header. Can also be set via environment:
   /// `LEMMY_CORS_ORIGIN=example.org,site.com`
   /// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin
@@ -214,4 +217,206 @@ pub struct FederationWorkerConfig {
   /// per second) and if a receiving instance is not keeping up.
   #[default(1)]
   pub concurrent_sends_per_instance: i8,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, SmartDefault, Document)]
+#[serde(default, deny_unknown_fields)]
+pub struct DebateConfig {
+  /// OpenRouter API key for accessing AI models
+  #[doku(example = "sk-or-v1-...")]
+  pub openrouter_api_key: Option<String>,
+
+  /// OpenRouter API base URL (optional, defaults to https://openrouter.ai/api/v1)
+  #[doku(example = "https://openrouter.ai/api/v1")]
+  pub openrouter_base_url: Option<String>,
+
+  /// Maximum number of concurrent debates to process
+  #[default(Some(5))]
+  pub max_concurrent_debates: Option<i32>,
+
+  /// Interval in seconds for polling active debates
+  #[default(Some(10))]
+  pub poll_interval_seconds: Option<u64>,
+
+  /// Maximum number of rounds per debate
+  #[default(Some(10))]
+  pub max_rounds_per_debate: Option<i32>,
+
+  /// Maximum tokens per AI response
+  #[default(Some(1000))]
+  pub max_tokens_per_response: Option<i32>,
+
+  /// Request timeout in seconds
+  #[default(Some(60))]
+  pub request_timeout_seconds: Option<u64>,
+
+  /// Maximum API calls per minute (rate limiting)
+  #[default(Some(60))]
+  pub max_api_calls_per_minute: Option<i32>,
+
+  /// Default AI models to use if user doesn't specify
+  #[default(vec![
+    "openai/gpt-4-turbo".to_string(),
+    "anthropic/claude-3-opus".to_string(),
+    "google/gemini-pro".to_string()
+  ])]
+  pub default_models: Vec<String>,
+}
+
+impl DebateConfig {
+  /// Validate the debate configuration and log warnings for issues
+  pub fn validate(&self) -> Result<(), String> {
+    // Validate API key format if present
+    if let Some(ref api_key) = self.openrouter_api_key {
+      if api_key.is_empty() {
+        return Err("OpenRouter API key cannot be empty".to_string());
+      }
+      if !api_key.starts_with("sk-or-") {
+        tracing::warn!(
+          "OpenRouter API key does not start with 'sk-or-'. This may indicate an invalid key format."
+        );
+      }
+    } else {
+      tracing::warn!("No OpenRouter API key configured. Debate system will not function without an API key.");
+    }
+
+    // Validate base URL if present
+    if let Some(ref base_url) = self.openrouter_base_url {
+      if base_url.is_empty() {
+        return Err("OpenRouter base URL cannot be empty".to_string());
+      }
+      if !base_url.starts_with("http://") && !base_url.starts_with("https://") {
+        return Err(format!("OpenRouter base URL must start with http:// or https://: {}", base_url));
+      }
+    }
+
+    // Validate limits are within reasonable ranges
+    if let Some(max_concurrent) = self.max_concurrent_debates {
+      if max_concurrent < 1 {
+        return Err("max_concurrent_debates must be at least 1".to_string());
+      }
+      if max_concurrent > 100 {
+        tracing::warn!(
+          "max_concurrent_debates is set to {}. This is very high and may cause performance issues.",
+          max_concurrent
+        );
+      }
+    }
+
+    if let Some(poll_interval) = self.poll_interval_seconds {
+      if poll_interval < 1 {
+        return Err("poll_interval_seconds must be at least 1".to_string());
+      }
+      if poll_interval > 300 {
+        tracing::warn!(
+          "poll_interval_seconds is set to {}. This is very high and debates may be slow to start.",
+          poll_interval
+        );
+      }
+    }
+
+    if let Some(max_rounds) = self.max_rounds_per_debate {
+      if max_rounds < 1 {
+        return Err("max_rounds_per_debate must be at least 1".to_string());
+      }
+      if max_rounds > 50 {
+        tracing::warn!(
+          "max_rounds_per_debate is set to {}. This is very high and may result in very long debates.",
+          max_rounds
+        );
+      }
+    }
+
+    if let Some(max_tokens) = self.max_tokens_per_response {
+      if max_tokens < 10 {
+        return Err("max_tokens_per_response must be at least 10".to_string());
+      }
+      if max_tokens > 4000 {
+        tracing::warn!(
+          "max_tokens_per_response is set to {}. This is very high and may result in high API costs.",
+          max_tokens
+        );
+      }
+    }
+
+    if let Some(timeout) = self.request_timeout_seconds {
+      if timeout < 5 {
+        return Err("request_timeout_seconds must be at least 5".to_string());
+      }
+      if timeout > 300 {
+        tracing::warn!(
+          "request_timeout_seconds is set to {}. This is very high and may cause long waits.",
+          timeout
+        );
+      }
+    }
+
+    if let Some(max_calls) = self.max_api_calls_per_minute {
+      if max_calls < 1 {
+        return Err("max_api_calls_per_minute must be at least 1".to_string());
+      }
+      if max_calls > 1000 {
+        tracing::warn!(
+          "max_api_calls_per_minute is set to {}. This is very high and may exceed API rate limits.",
+          max_calls
+        );
+      }
+    }
+
+    // Validate default models
+    if self.default_models.is_empty() {
+      return Err("default_models cannot be empty. At least one model must be specified.".to_string());
+    }
+
+    for model in &self.default_models {
+      if model.is_empty() {
+        return Err("default_models contains an empty model identifier".to_string());
+      }
+      if !model.contains('/') {
+        tracing::warn!(
+          "Model identifier '{}' does not contain a '/'. Valid format is 'provider/model-name'.",
+          model
+        );
+      }
+    }
+
+    Ok(())
+  }
+
+  /// Get the OpenRouter base URL, using default if not configured
+  pub fn get_base_url(&self) -> String {
+    self.openrouter_base_url
+      .clone()
+      .unwrap_or_else(|| "https://openrouter.ai/api/v1".to_string())
+  }
+
+  /// Get the maximum concurrent debates, using default if not configured
+  pub fn get_max_concurrent_debates(&self) -> i32 {
+    self.max_concurrent_debates.unwrap_or(5)
+  }
+
+  /// Get the poll interval, using default if not configured
+  pub fn get_poll_interval_seconds(&self) -> u64 {
+    self.poll_interval_seconds.unwrap_or(10)
+  }
+
+  /// Get the maximum rounds per debate, using default if not configured
+  pub fn get_max_rounds_per_debate(&self) -> i32 {
+    self.max_rounds_per_debate.unwrap_or(10)
+  }
+
+  /// Get the maximum tokens per response, using default if not configured
+  pub fn get_max_tokens_per_response(&self) -> i32 {
+    self.max_tokens_per_response.unwrap_or(1000)
+  }
+
+  /// Get the request timeout, using default if not configured
+  pub fn get_request_timeout_seconds(&self) -> u64 {
+    self.request_timeout_seconds.unwrap_or(60)
+  }
+
+  /// Get the maximum API calls per minute, using default if not configured
+  pub fn get_max_api_calls_per_minute(&self) -> i32 {
+    self.max_api_calls_per_minute.unwrap_or(60)
+  }
 }

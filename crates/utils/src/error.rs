@@ -131,6 +131,18 @@ pub enum LemmyErrorType {
   CannotCombineCommunityIdAndMultiCommunityId,
   MultiCommunityEntryLimitReached,
   TooManyRequests,
+  // Debate errors
+  DebateAlreadyExists,
+  DebateNotFound,
+  DebateNeedsTwoModels,
+  DebateInvalidRounds,
+  DebateNotActive,
+  DebateNotPaused,
+  DebateAlreadyCompleted,
+  DebateMissingAdditionalRounds,
+  DebateTooManyRounds,
+  NotPostCreator,
+  CouldntFindPost,
 }
 
 /// These errors are only used for federation or internally and dont need to be translated.

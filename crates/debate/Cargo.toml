@@ -1,0 +1,54 @@
+[package]
+name = "lemmy_debate"
+version.workspace = true
+edition.workspace = true
+description.workspace = true
+license.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "lemmy_debate"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[features]
+full = [
+  "lemmy_db_schema/full",
+  "lemmy_db_schema_file/full",
+  "lemmy_db_views_post",
+  "lemmy_utils/full",
+  "diesel",
+  "diesel-async",
+  "tokio",
+  "reqwest",
+]
+
+[dependencies]
+lemmy_db_schema = { workspace = true }
+lemmy_db_schema_file = { workspace = true }
+lemmy_db_views_post = { workspace = true, optional = true }
+lemmy_utils = { workspace = true, optional = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_with = { workspace = true }
+diesel = { workspace = true, optional = true }
+diesel-async = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+derive-new = { workspace = true }
+url = { workspace = true }
+activitypub_federation = { workspace = true }
+lemmy_diesel_utils = { workspace = true }
+reqwest-middleware = { workspace = true }
+
+[dev-dependencies]
+serial_test = { workspace = true }

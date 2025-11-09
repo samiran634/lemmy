@@ -256,6 +256,67 @@ diesel::table! {
 }
 
 diesel::table! {
+    ai_agent (id) {
+        id -> Int4,
+        person_id -> Int4,
+        #[max_length = 100]
+        model_identifier -> Varchar,
+        #[max_length = 100]
+        display_name -> Varchar,
+        #[max_length = 50]
+        provider -> Varchar,
+        #[max_length = 50]
+        model_version -> Nullable<Varchar>,
+        avatar_url -> Nullable<Text>,
+        is_active -> Bool,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    debate_config (id) {
+        id -> Int4,
+        post_id -> Int4,
+        creator_id -> Int4,
+        ai_models -> Array<Text>,
+        #[max_length = 50]
+        debate_style -> Varchar,
+        max_rounds -> Int4,
+        max_tokens_per_response -> Nullable<Int4>,
+        custom_system_prompt -> Nullable<Text>,
+        include_human_comments -> Bool,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    debate_round (id) {
+        id -> Int4,
+        post_id -> Int4,
+        round_number -> Int4,
+        ai_agent_id -> Int4,
+        comment_id -> Int4,
+        tokens_used -> Nullable<Int4>,
+        api_latency_ms -> Nullable<Int4>,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    debate_state (id) {
+        id -> Int4,
+        post_id -> Int4,
+        #[max_length = 20]
+        status -> Varchar,
+        current_round -> Int4,
+        total_rounds -> Int4,
+        last_activity_at -> Timestamptz,
+        error_message -> Nullable<Text>,
+        metadata -> Nullable<Jsonb>,
+    }
+}
+
+diesel::table! {
     email_verification (id) {
         id -> Int4,
         local_user_id -> Int4,
@@ -877,6 +938,7 @@ diesel::table! {
     secret (id) {
         id -> Int4,
         jwt_secret -> Varchar,
+        openrouter_api_key -> Nullable<Varchar>,
     }
 }
 
@@ -966,6 +1028,13 @@ diesel::joinable!(community_language -> community (community_id));
 diesel::joinable!(community_language -> language (language_id));
 diesel::joinable!(community_report -> community (community_id));
 diesel::joinable!(custom_emoji_keyword -> custom_emoji (custom_emoji_id));
+diesel::joinable!(ai_agent -> person (person_id));
+diesel::joinable!(debate_config -> person (creator_id));
+diesel::joinable!(debate_config -> post (post_id));
+diesel::joinable!(debate_round -> ai_agent (ai_agent_id));
+diesel::joinable!(debate_round -> comment (comment_id));
+diesel::joinable!(debate_round -> post (post_id));
+diesel::joinable!(debate_state -> post (post_id));
 diesel::joinable!(email_verification -> local_user (local_user_id));
 diesel::joinable!(federation_allowlist -> instance (instance_id));
 diesel::joinable!(federation_blocklist -> instance (instance_id));
@@ -1032,6 +1101,7 @@ diesel::joinable!(site_language -> site (site_id));
 diesel::joinable!(tag -> community (community_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+  ai_agent,
   comment,
   comment_actions,
   comment_report,
@@ -1039,6 +1109,9 @@ diesel::allow_tables_to_appear_in_same_query!(
   community_actions,
   community_language,
   community_report,
+  debate_config,
+  debate_round,
+  debate_state,
   email_verification,
   federation_allowlist,
   federation_blocklist,

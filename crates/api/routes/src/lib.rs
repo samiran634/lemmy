@@ -23,6 +23,12 @@ use lemmy_api::{
     transfer::transfer_community,
     update_notifications::update_community_notifications,
   },
+  debate::{
+    control::control_debate,
+    create::create_debate,
+    metrics::get_debate_metrics,
+    status::get_debate_status,
+  },
   federation::{
     list_comments::{list_comments, list_comments_slim},
     list_person_content::list_person_content,
@@ -486,6 +492,15 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
           .route("/health", get().to(pictrs_health))
           .route("/list", get().to(list_all_media))
           .route("/{filename}", get().to(get_image)),
+      )
+      // Debate
+      .service(
+        scope("/debate")
+          .wrap(rate_limit.post())
+          .route("/create", post().to(create_debate))
+          .route("/status/{post_id}", get().to(get_debate_status))
+          .route("/control/{post_id}", post().to(control_debate))
+          .route("/metrics", get().to(get_debate_metrics)),
       ),
   );
 }

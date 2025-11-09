@@ -53,6 +53,7 @@ lemmy_db_schema = { workspace = true, features = ["full"] }
 lemmy_api_utils = { workspace = true }
 lemmy_db_schema_file = { workspace = true }
 lemmy_email = { workspace = true }
+lemmy_debate = { workspace = true, features = ["full"] }
 activitypub_federation = { workspace = true }
 tracing = { workspace = true }
 bcrypt = { workspace = true }
